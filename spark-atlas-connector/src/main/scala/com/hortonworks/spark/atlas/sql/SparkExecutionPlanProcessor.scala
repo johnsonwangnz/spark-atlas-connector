@@ -22,25 +22,30 @@ import java.util.concurrent.TimeUnit
 
 import com.hortonworks.spark.atlas.sql.CommandsHarvester.WriteToDataSourceV2Harvester
 import com.hortonworks.spark.atlas.sql.SparkExecutionPlanProcessor.SinkDataSourceWriter
+import org.apache.spark.sql.connector.write.streaming.StreamingDataWriterFactory
+import org.apache.spark.sql.connector.write.{PhysicalWriteInfo, WriterCommitMessage}
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.command._
 import org.apache.spark.sql.execution.datasources.{InsertIntoHadoopFsRelationCommand, SaveIntoDataSourceCommand}
 import org.apache.spark.sql.execution.datasources.v2.WriteToDataSourceV2Exec
-import org.apache.spark.sql.execution.streaming.sources.MicroBatchWriter
+import org.apache.spark.sql.execution.streaming.sources.MicroBatchWrite
 import org.apache.spark.sql.hive.execution._
-import org.apache.spark.sql.sources.v2.writer.{DataWriterFactory, WriterCommitMessage}
+// import org.apache.spark.sql.sources.v2.writer.{DataWriterFactory, WriterCommitMessage}
 import com.hortonworks.spark.atlas._
 import com.hortonworks.spark.atlas.types.metadata
 import com.hortonworks.spark.atlas.utils.Logging
 import org.apache.atlas.model.instance.AtlasObjectId
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.execution.streaming.StreamExecution
-import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
+// import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
 import org.apache.spark.sql.streaming.SinkProgress
 import org.apache.spark.sql.streaming.StreamingQueryListener.QueryProgressEvent
 
 import scala.collection.mutable
 
+import org.apache.spark.sql.catalyst.analysis.PersistedView
+
+import org.apache.spark.sql.connector.write.streaming.StreamingWrite
 
 case class QueryDetail(
     qe: QueryExecution,
@@ -80,9 +85,10 @@ class SparkExecutionPlanProcessor(
     if (qd.sink.isDefined && !outNodes.exists(_.isInstanceOf[WriteToDataSourceV2Exec])) {
       val sink = qd.sink.get
 
-      outNodes ++= Seq(
-        WriteToDataSourceV2Exec(
-          new MicroBatchWriter(0,
+      // TODO
+      outNodes = outNodes ++:
+        Seq(WriteToDataSourceV2Exec(
+          new MicroBatchWrite(0,
             new SinkDataSourceWriter(sink)), qd.qe.sparkPlan))
     }
 
@@ -170,21 +176,16 @@ class SparkExecutionPlanProcessor(
 
 object SparkExecutionPlanProcessor {
 
-  class SinkDataSourceWriter(val sinkProgress: SinkProgress) extends StreamWriter {
-    override def createWriterFactory(): DataWriterFactory[InternalRow] =
+  class SinkDataSourceWriter(val sinkProgress: SinkProgress) extends StreamingWrite {
+    override def createStreamingWriterFactory(physicalWriteInfo: PhysicalWriteInfo)
+     : StreamingDataWriterFactory =
       throw new UnsupportedOperationException("should not reach here!")
 
-    override def commit(messages: Array[WriterCommitMessage]): Unit =
+    override def commit(l: Long, writerCommitMessages: Array[WriterCommitMessage]): Unit =
       throw new UnsupportedOperationException("should not reach here!")
 
-    override def abort(messages: Array[WriterCommitMessage]): Unit =
-      throw new UnsupportedOperationException("should not reach here!")
-
-    override def commit(epochId: Long, messages: Array[WriterCommitMessage]): Unit =
-      throw new UnsupportedOperationException("should not reach here!")
-
-    override def abort(epochId: Long, messages: Array[WriterCommitMessage]): Unit =
-      throw new UnsupportedOperationException("should not reach here!")
+    override def abort(epochId: Long, writerCommitMessages: Array[WriterCommitMessage]): Unit =
+     throw new UnsupportedOperationException("should not reach here!")
   }
 
 }

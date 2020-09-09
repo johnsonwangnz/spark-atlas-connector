@@ -206,18 +206,22 @@ object SparkUtils extends Logging {
 
     thriftServerListener match {
       case Some(listener) =>
+        // TODO
         val qeString = qe.toString()
-        // Based on the QueryExecution to find out the session id. This is quite cost, but
-        // currently it is the way to correlate query plan to session.
-        val sessId = listener.getExecutionList.reverseIterator
-          .find(_.executePlan == qeString)
-          .map(_.sessionId)
-        sessId.flatMap { id =>
-          listener.getSessionList.reverseIterator.find(_.sessionId == id)
-        }
-          .map(_.userName)
-          .getOrElse(currUser())
-
+        /**
+         * val qeString = qe.toString()
+        * // Based on the QueryExecution to find out the session id. This is quite cost, but
+        * // currently it is the way to correlate query plan to session.
+        * val sessId = listener.getExecutionList.reverseIterator
+        *  .find(_.executePlan == qeString)
+        *  .map(_.sessionId)
+        * sessId.flatMap { id =>
+        *  listener.getSessionList.reverseIterator.find(_.sessionId == id)
+        * }
+        *  .map(_.userName)
+        *.getOrElse(currUser())
+        */
+        currUser()
       case None => currUser()
     }
   }
